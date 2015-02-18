@@ -8,14 +8,18 @@ back () {
 # List all category tags that match an argument.
 bmgrep () {
   local SEARCHTERM="*$1*"
+  find "$TAGPATH" -type d -name "$SEARCHTERM"  | \ # See note 1.
+      awk 'BEGIN {FS="/"} {print $NF}'             # See note 2.
+
+  # Note 1:
   # Find directories in "$TAGPATH' with names
   # that partially match "$SEARCHTERM".
-  find "$TAGPATH" -type d -name "$SEARCHTERM" \
 
-  # But print only the last '/'-delimited field of each match.
-  # ("$NF" in awk refers to the last field of a record.)
+  # Note 2:
+  # Print only the last '/'-delimited field of each match.
   # That is, print only the name of the bottom-most directory.
-  | awk 'BEGIN {FS="/"} {print $NF}'
+  # (The value of "$NF" in awk is the number of fields in a record;
+  # in this context, "$NF" refers to the last field.)
 }
 
 fatal () {
