@@ -1,0 +1,2 @@
+export SOFTLINKS="$HOME/SoftLinks"
+export RAILSCHESS="$HOME/Documents/practice/rails/rails-chess"

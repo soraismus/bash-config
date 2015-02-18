@@ -1,0 +1,149 @@
+back () {
+  revert
+  for i in `seq 1 $1`; do
+    cd ..
+  done
+}
+
+# List all category tags that match an argument.
+bmgrep () {
+  local SEARCHTERM="*$1*"
+  # Find directories in "$TAGPATH' with names
+  # that partially match "$SEARCHTERM".
+  find "$TAGPATH" -type d -name "$SEARCHTERM" \
+
+  # But print only the last '/'-delimited field of each match.
+  # ("$NF" in awk refers to the last field of a record.)
+  # That is, print only the name of the bottom-most directory.
+  | awk 'BEGIN {FS="/"} {print $NF}'
+}
+
+fatal () {
+  echoErr "$2" # See 'echoErr' in the 'aliases' config file.
+  exit "$1"
+}
+
+# -------------------------------------------------------------
+# Generate a message that indicates the branch and status     |
+# of a git-controlled directory. The '.bashrc' file uses this |
+# function to determine the value of 'PS1'.                   |
+# -------------------------------------------------------------
+git_prompt () {
+  # ------------------------------------------------------------------
+  # `git rev-parse` interprets a <rev> (i.e., a revision parameter). |
+  # 'HEAD' refers to the content of '.git/HEAD', which is a pointer  |
+  # to the current <ref> (i.e., the file contains a specific path    |
+  # within the '.git/refs/heads' directory). The '--abbrev-ref'      |
+  # option provides the name of the branch.                          |
+  # ------------------------------------------------------------------
+  # If there is an error (e.g., no git repository exists),           |
+  # 'branch' is set to an empty string.                              |
+  # ------------------------------------------------------------------
+  local BRANCH="$( git rev-parse --abbrev-ref HEAD 2> /dev/null )"
+
+  local RESULT=""
+  local STATUS=""
+
+  if [ -n "$BRANCH" ]; then
+    # `git status -z` returns a 1-line response.
+    if [ -n "$(git status -z 2> /dev/null)" ]; then
+      STATUS="✘"
+    else
+      STATUS="✔"
+    fi
+    RESULT="($BRANCH $STATUS) "
+  fi
+
+  echo "$RESULT"
+}
+
+# Return the index number (inode) of the provided file.
+inode () {
+  [ -z "$1" ] && fatal 1 'This function requires an argument'
+  echo "$( ls -iL "$1" | sed 's/ .*//' )"
+}
+
+mcd () {
+  mkdir "$1"
+  cd "$1"
+}
+
+# Change the representation of the current path.
+# That is, display the direct path rather than the bookmark-linked path.
+revert () {
+  # Exit immediately if the filepath doesn't contain '.marks'.
+  [[ ! "$PWD" =~ '.marks' ]] && exit
+
+  # The first 5 fields are equivalent to the first 4 ancestor directories,
+  # and so 'PATH_PREFIX' is set to "/home/theo/.marks/#{directory}".
+  local PATH_PREFIX="$( pwd | cut -d'/' -f1-5 )"
+
+  # Set 'LEAF' to the remaining fragment of the current working directory path.
+  local LEAF="$( pwd | cut -d'/' -f6- )"
+
+  # Because "$PATH_PREFIX" is a softlink, the 11th field of
+  # `ls -l "$PATH_PREFIX"` is the actual direct path.
+  local RESTORED_PATH="$( ls -l "$PATH_PREFIX" | awk '{print $11}' )"
+
+  local FULL_PATH="${RESTORED_PATH}/${LEAF}"
+  cd "$FULL_PATH"
+}
+
+# Go to the directory to which the provided bookmark links.
+to () {
+  # Dereference '$MARKPATH/$1' and set to 'TGT'.
+  local TGT="$( ls -l "$MARKPATH/$1" 2>/dev/null | awk '{print $11}' )"
+  
+  [ -z "$TGT" ] && fatal 3 "No such mark: $1"
+
+  # Check whether the string '$TGT' has a dollar sign.
+  if echo $TGT | grep \\$ >/dev/null; then
+
+    # Strip the dollar sign off.
+    local TGT2="$( echo $TGT | sed 's/\$//' )"
+
+    # Double indirection by way of the Bash construct `${!...}`.
+    # Double indirection is necessary since the variable 'TGT2'
+    # is used rather than '$TGT2' (i.e., the reference of 'TGT2').
+    cd -L ${!TGT2} 2>/dev/null || fatal 4 "Error occurred."
+
+  else
+    # The following preserves '$MARKPATH' at the prompt,
+    # and this favors succinctness.
+    cd -L "$MARKPATH/$1"
+  fi
+}
+
+# Toggle between a prompt that displays the full current-working-directory
+# path and a prompt that displays only the bottom-most directory.
+togglePrompt () {
+  # A lowercase 'w' indicates a full path, whereas
+  # an uppercase 'W' indicates an abbreviated path.
+  # Toggle the value of the prompt variable 'PS1'.
+  if [[ "$PS1" =~ w ]]; then
+    PS1="$(echo "$PS1" | sed 's/w/W/g')"
+  else
+    PS1="$(echo "$PS1" | sed 's/W/w/g')"
+  fi
+}
+
+listRecentFiles () {
+  # List first four files
+  # -F --> with indicator suffixes (*/=>@|)
+  # -t --> sorted by modification time
+  # -1 --> one per line
+  # Then transform each newline to a space.
+  ls -Ft1 | head -4 | tr "\\n" " "
+
+  # Append a newline.
+  echo # Append a newline.
+}
+
+# The variable 'PROMPT_COMMAND' is set to
+# the following function in the '.exports' file.
+prompt_command () {
+  # Record the current working directory.
+  pwd > "$HOME/.lastdir"
+  [ "$LASTDIR" != "$PWD" ] && listRecentFiles
+  export LASTDIR="$PWD"
+}
