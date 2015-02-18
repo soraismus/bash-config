@@ -1,6 +1,7 @@
 /*
 !/bash*
 !.bash*
+!.inputrc
 !.profile
 .bash_dir_history
 .bash_history
