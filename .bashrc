@@ -16,7 +16,7 @@ nvm_source="$HOME/.nvm/nvm.sh"
 source_files="$bash_config_files $nvm_source"
 
 # `rsource` each bash-config file as well as the 'nvm' file.
-for file in "$source_files"; do rsource "$file"; done
+for file in $source_files; do rsource "$file"; done
 
 unset bash_config_files file nvm_source source_files
 
