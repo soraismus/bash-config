@@ -5,3 +5,5 @@
 !.profile
 .bash_dir_history
 .bash_history
+*.swo
+*.swp
