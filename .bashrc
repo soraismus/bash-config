@@ -11,7 +11,7 @@ rsource () {
   [ -r "$1" ] && source "$1"
 }
 
-bash_config_files="$PWD/.bash/*"
+bash_config_files="$HOME/.bash/*"
 nvm_source="$HOME/.nvm/nvm.sh"
 source_files="$bash_config_files $nvm_source"
 
