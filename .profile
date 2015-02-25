@@ -8,21 +8,11 @@
 # for ssh logins, install and configure the libpam-umask package.
 #umask 022
 
+rsource () {
+  [ -r "$1" ] && source "$1"
+}
+
+rsource "$HOME/.path_variable"
+
 # if running bash
-if [ -n "$BASH_VERSION" ]; then
-    # include .bashrc if it exists
-    if [ -f "$HOME/.bashrc" ]; then
-	. "$HOME/.bashrc"
-    fi
-fi
-
-# set PATH so it includes user's private bin if it exists
-if [ -d "$HOME/bin" ] ; then
-    PATH="$HOME/bin:$PATH"
-fi
-
-# 30 October 2013
-# script based on mosbylinux.wordpress/2012/08/15/...
-# /home/theo/scripts/auto-texas &
-
-export PATH="$PATH:$HOME/.rvm/bin" # Add RVM to PATH for scripting
+[ -n "$BASH_VERSION" ] && rsource "$HOME/.bashrc"
