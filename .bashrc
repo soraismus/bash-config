@@ -13,7 +13,8 @@ rsource () {
 
 bash_config_files="$HOME/.bash/*"
 nvm_source="$HOME/.nvm/nvm.sh"
-source_files="$bash_config_files $nvm_source"
+nvm_completion="$HOME/.nvm/bash_completion"
+source_files="$bash_config_files $nvm_source $nvm_completion"
 
 # `rsource` each bash-config file as well as the 'nvm' file.
 for file in $source_files; do rsource "$file"; done
