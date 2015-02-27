@@ -12,13 +12,18 @@ rsource () {
 }
 
 bash_config_files="$HOME/.bash/*"
-nvm_source="$HOME/.nvm/nvm.sh"
-source_files="$bash_config_files $nvm_source"
+completion_files="$HOME/.bash/completion-scripts/*"
 
-# `rsource` each bash-config file as well as the 'nvm' file.
+nvm_source="$HOME/.nvm/nvm.sh"
+nvm_completion="$HOME/.nvm/bash_completion"
+nvm_files="$nvm_source $nvm_completion"
+
+source_files="$bash_config_files $completion_files $nvm_files"
+
+# `rsource` each bash-config and completion file as well as the 'nvm' files.
 for file in $source_files; do rsource "$file"; done
 
-unset bash_config_files file nvm_source source_files
+unset bash_config_files completion_files file nvm_completion nvm_files nvm_source source_files
 
 # If the `shopt -o` 'posix' feature is turned off,
 # `rsource` the primary bash-completion file.
