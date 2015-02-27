@@ -12,7 +12,7 @@ rsource () {
 }
 
 bash_config_files="$HOME/.bash/*"
-completion_files="$HOME/.bash/completion-scripts/*"
+completion_files="$HOME/.bash/completion/*"
 
 nvm_source="$HOME/.nvm/nvm.sh"
 nvm_completion="$HOME/.nvm/bash_completion"
