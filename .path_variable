@@ -8,6 +8,8 @@ pathmunge () {
 [ -d "$HOME/bin" ] && PATH="$HOME/bin:$PATH"
 pathmunge "/usr/local/scripts"
 
+pathmunge "$HOME/.rvm/bin"
+
 [ -f "$HOME/.nvm/nvm.sh" ] && pathmunge "./node_modules/.bin"
 pathmunge "/usr/local/heroku/bin"
 
