@@ -150,6 +150,6 @@ listRecentFiles () {
 prompt_command () {
   # Record the current working directory.
   pwd > "$HOME/.lastdir"
-  [ "$LASTDIR" != "$PWD" ] && listRecentFiles
+  [ "$LASTDIR" != "$PWD" ] && [ "$MARKPATH/bm" != "$PWD" ] && listRecentFiles
   export LASTDIR="$PWD"
 }
