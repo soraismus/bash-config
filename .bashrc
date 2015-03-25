@@ -18,7 +18,9 @@ nvm_source="$HOME/.nvm/nvm.sh"
 nvm_completion="$HOME/.nvm/bash_completion"
 nvm_files="$nvm_source $nvm_completion"
 
-source_files="$bash_config_files $completion_files $nvm_files"
+rvm_source="$HOME/.rvm/scripts/rvm"
+
+source_files="$bash_config_files $completion_files $nvm_files $rvm_source"
 
 # `rsource` each bash-config and completion file as well as the 'nvm' files.
 for file in $source_files; do rsource "$file"; done
