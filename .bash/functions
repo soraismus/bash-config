@@ -153,3 +153,10 @@ prompt_command () {
   [ "$LASTDIR" != "$PWD" ] && [ "$MARKPATH/bm" != "$PWD" ] && listRecentFiles
   export LASTDIR="$PWD"
 }
+
+# Create a new tmux session.
+session () {
+  local session_name="$1"
+  local window_name="$2"
+  tmux new-session -s "$session_name" -n "$window_name"
+}
