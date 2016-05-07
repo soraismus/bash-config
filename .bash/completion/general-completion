@@ -1,5 +1,16 @@
 # NB: The syntax `( $str )` transforms a space-delimited string into an array.
 
+_completeFF () {
+  local currentword=${COMP_WORDS[COMP_CWORD]}
+
+  # Set 'wordlist' to the set of filenames found in any subdirectory
+  # of the current directory.
+  local wordlist=$( find . -type f -printf "%f " | uniq | sort )
+
+  COMPREPLY=( $( compgen -W "$wordlist" -- "$currentword" ) )
+  return 0
+}
+
 _completeMarks () {
   local currentword=${COMP_WORDS[COMP_CWORD]}
   # Set 'wordlist' to the set of symbolic links in '$MARKPATH'.
@@ -46,6 +57,8 @@ complete -f -X '!*.@(?([xX]|[sS])[hH][tT][mM]?([lL]))' links
 # ----------
 # Functions
 # ----------
+complete -F _completeFF ff
+complete -F _completeFF vff
 complete -F _completeMarks to
 complete -F _completeNamespaceScript mark note tag
 complete -F _completeTags bm bmgrep bookmark

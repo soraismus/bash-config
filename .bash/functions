@@ -24,6 +24,12 @@ bmgrep () {
   # in this context, "$NF" refers to the last field.)
 }
 
+derefMark () {
+  # Because '$MARKPATH/$1' is a softlink, the 11th field of
+  # `ls -l "$MARKPATH/$1"` is the actual direct path.
+  echo "$( ls -l "$MARKPATH/$1" 2>/dev/null | awk '{print $11}' )"
+}
+
 fatal () {
   echoErr "$2" # See 'echoErr' in the 'aliases' config file.
   exit "$1"
@@ -63,10 +69,36 @@ git_prompt () {
   echo "$RESULT"
 }
 
+grepNormalize () {
+  echo "\(^\|\s\+\)$1\(\s\+\|$\)"
+}
+
 # Return the index number (inode) of the provided file.
 inode () {
   [ -z "$1" ] && fatal 1 'This function requires an argument'
   echo "$( ls -iL "$1" | sed 's/ .*//' )"
+}
+
+isMark () {
+  echo "$( listMarks | grep "$( grepNormalize "$1" )" -c )"
+}
+
+listMarks () {
+  for name in "$( ls "$MARKPATH" )"; do
+    echo "$name"
+  done
+}
+
+listRecentFiles () {
+  # List first four files
+  # -F --> with indicator suffixes (*/=>@|)
+  # -t --> sorted by modification time
+  # -1 --> one per line
+  # Then transform each newline to a space.
+  ls -Ft1 | head -4 | tr "\\n" " "
+
+  # Append a newline.
+  echo # Append a newline.
 }
 
 mcd () {
@@ -74,49 +106,81 @@ mcd () {
   cd "$1"
 }
 
+# The variable 'PROMPT_COMMAND' is set to
+# the following function in the '.exports' file.
+prompt_command () {
+  # Record the current working directory.
+  pwd > "$HOME/.lastdir"
+  [ "$LASTDIR" != "$PWD" ] && [ "$MARKPATH/bm" != "$PWD" ] && [ "$HOME/Documents/bookmarks" != "$PWD" ] && listRecentFiles
+
+  export LASTDIR="$PWD"
+}
+
 # Change the representation of the current path.
 # That is, display the direct path rather than the bookmark-linked path.
 revert () {
-  # Exit immediately if the filepath doesn't contain '.marks'.
-  [[ ! "$PWD" =~ '.marks' ]] && exit
+  # Determine whether the filepath contains '.marks'.
+  if [[ "$PWD" =~ '.marks' ]]; then
 
-  # The first 5 fields are equivalent to the first 4 ancestor directories,
-  # and so 'PATH_PREFIX' is set to "/home/theo/.marks/#{directory}".
-  local PATH_PREFIX="$( pwd | cut -d'/' -f1-5 )"
+    # The prefix of the current working directory path is of the
+    # form "/home/theo/.marks/#{directory}".
+    # The 5th field is equivalent to the name of a specific mark,
+    # and the following command extracts that mark.
+    local MARK="$( pwd | cut -d'/' -f5 )"
 
-  # Set 'LEAF' to the remaining fragment of the current working directory path.
-  local LEAF="$( pwd | cut -d'/' -f6- )"
+    # Set 'LEAF' to the remaining fragment of the current
+    # working directory path.
+    local LEAF="$( pwd | cut -d'/' -f6- )"
 
-  # Because "$PATH_PREFIX" is a softlink, the 11th field of
-  # `ls -l "$PATH_PREFIX"` is the actual direct path.
-  local RESTORED_PATH="$( ls -l "$PATH_PREFIX" | awk '{print $11}' )"
+    local RESTORED_PATH="$( derefMark "$MARK" )"
 
-  local FULL_PATH="${RESTORED_PATH}/${LEAF}"
-  cd "$FULL_PATH"
+    local FULL_PATH="${RESTORED_PATH}/${LEAF}"
+    cd "$FULL_PATH"
+  fi
+}
+
+# Create a new tmux session.
+session () {
+  local session_name="$1"
+  local window_name="$2"
+  tmux new-session -s "$session_name" -n "$window_name"
 }
 
 # Go to the directory to which the provided bookmark links.
 to () {
-  # Dereference '$MARKPATH/$1' and set to 'TGT'.
-  local TGT="$( ls -l "$MARKPATH/$1" 2>/dev/null | awk '{print $11}' )"
-  
-  [ -z "$TGT" ] && fatal 3 "No such mark: $1"
+  local BASE_TGT="$( echo "$1" | cut -d'/' -f1 )"
+  local LEAF="$( echo "$1" | cut -d'/' -f2- -s )"
 
-  # Check whether the string '$TGT' has a dollar sign.
-  if echo $TGT | grep \\$ >/dev/null; then
+  # Determine whether the destination is based on a mark.
+  if [ "$( isMark "$BASE_TGT" )" -eq 1 ]; then
 
-    # Strip the dollar sign off.
-    local TGT2="$( echo $TGT | sed 's/\$//' )"
+    # Dereference '$MARKPATH/$1' and set to 'TGT'.
+    local TGT="$( derefMark "$BASE_TGT" )"
+    
+    [ -z "$TGT" ] && fatal 3 "No such mark: $BASE_TGT"
 
-    # Double indirection by way of the Bash construct `${!...}`.
-    # Double indirection is necessary since the variable 'TGT2'
-    # is used rather than '$TGT2' (i.e., the reference of 'TGT2').
-    cd -L ${!TGT2} 2>/dev/null || fatal 4 "Error occurred."
+    # Check whether the string '$TGT' has a dollar sign.
+    if echo $TGT | grep \\$ >/dev/null; then
 
+      # Strip the dollar sign off.
+      local TGT2="$( echo $TGT | sed 's/\$//' )"
+
+      # Double indirection by way of the Bash construct `${!...}`.
+      # Double indirection is necessary since the variable 'TGT2'
+      # is used rather than '$TGT2' (i.e., the reference of 'TGT2').
+      cd -L ${!TGT2} 2>/dev/null || fatal 4 "Error occurred."
+
+    else
+      # The following preserves '$MARKPATH' at the prompt,
+      # and this favors succinctness.
+      cd -L "$MARKPATH/$BASE_TGT"
+    fi
+
+    revert
+
+    if [ -n "$LEAF" ]; then cd "$LEAF"; fi
   else
-    # The following preserves '$MARKPATH' at the prompt,
-    # and this favors succinctness.
-    cd -L "$MARKPATH/$1"
+    cd "$1"
   fi
 }
 
@@ -133,23 +197,8 @@ togglePrompt () {
   fi
 }
 
-listRecentFiles () {
-  # List first four files
-  # -F --> with indicator suffixes (*/=>@|)
-  # -t --> sorted by modification time
-  # -1 --> one per line
-  # Then transform each newline to a space.
-  ls -Ft1 | head -4 | tr "\\n" " "
-
-  # Append a newline.
-  echo # Append a newline.
-}
-
-# The variable 'PROMPT_COMMAND' is set to
-# the following function in the '.exports' file.
-prompt_command () {
-  # Record the current working directory.
-  pwd > "$HOME/.lastdir"
-  [ "$LASTDIR" != "$PWD" ] && [ "$MARKPATH/bm" != "$PWD" ] && listRecentFiles
-  export LASTDIR="$PWD"
+# Search for the path of a file matching the name provided; open it with vim.
+vff () {
+  local file_name="*$1*"
+  v "$(find . -name "$file_name")"
 }
