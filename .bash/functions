@@ -42,6 +42,15 @@ bmlist () {
     awk -F'/' 'BEGIN { count = 0 } {count++; printf "%-4s %s\n", count, $NF}'
 }
 
+# List all entries under the tag "$1".
+bmlistTitles () {
+  local SEARCHTERM=*"$1"*
+  ls -l $TAGPATH/$SEARCHTERM   | \
+    awk '!/total/ {print $11}' | \
+    sed 's/^.*~\(.*\)\.md/\1/' | \
+    awk -F'/' 'BEGIN { count = 0 } {count++; printf "%-4s %s\n", count, $NF}'
+}
+
 # Open in vim the ith ("$2") entry under the tag "$1".
 bmvim () {
   local filename="$( bmget "$1" "$2" )"
