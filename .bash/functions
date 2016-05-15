@@ -5,6 +5,16 @@ back () {
   done
 }
 
+# Determine the path/filename corresponding to the ith ("$2") entry under the tag "$1".
+bmget () {
+  local SEARCHTERM=*"$1"*
+  local filename="$(
+    ls -l $TAGPATH/$SEARCHTERM   | \
+      awk '!/total/ {print $11}' | \
+      awk -v fileIndex="$2" 'BEGIN { count = 0 } {count++; if (count == fileIndex) print}' )"
+  echo "$filename"
+}
+
 # List all category tags that match an argument.
 bmgrep () {
   local SEARCHTERM="*$1*"
@@ -22,6 +32,20 @@ bmgrep () {
   # That is, print only the name of the bottom-most directory.
   # (The value of "$NF" in awk is the number of fields in a record;
   # in this context, "$NF" refers to the last field.)
+}
+
+# List all entries under the tag "$1".
+bmlist () {
+  local SEARCHTERM=*"$1"*
+  ls -l $TAGPATH/$SEARCHTERM   | \
+    awk '!/total/ {print $11}' | \
+    awk -F'/' 'BEGIN { count = 0 } {count++; printf "%-4s %s\n", count, $NF}'
+}
+
+# Open in vim the ith ("$2") entry under the tag "$1".
+bmvim () {
+  local filename="$( bmget "$1" "$2" )"
+  vim "$filename"
 }
 
 derefMark () {
